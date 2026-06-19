@@ -2,148 +2,194 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Мои предпочтения</title>
-  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phantasm Sketches — Создать скетч</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .vk-blue { color: #0077ff; }
+    body { background: linear-gradient(135deg, #0f0a1f, #1a0f2e); color: #e0d4ff; font-family: system-ui; }
+    .glass { background: rgba(26, 17, 46, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(192, 38, 211, 0.3); }
   </style>
 </head>
-<body class="bg-zinc-100 min-h-screen">
+<body class="min-h-screen">
 
-  <div class="max-w-md mx-auto bg-white min-h-screen shadow-xl overflow-hidden">
-    
-    <!-- Header с фото и именем -->
-    <div id="header" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 flex items-center gap-4">
-      <img id="userPhoto" class="w-16 h-16 rounded-2xl border-2 border-white object-cover" alt="Фото">
-      <div>
-        <h1 class="text-2xl font-bold" id="userName">Привет!</h1>
-        <p class="text-blue-100 text-sm">Заполни анкету за 30 секунд</p>
+  <div class="max-w-3xl mx-auto py-10 px-6">
+    <div class="glass rounded-3xl p-10">
+
+      <h1 class="text-5xl font-bold text-center mb-12">Создать скетч</h1>
+
+      <!-- Мир -->
+      <div class="mb-12">
+        <h2 class="text-2xl font-semibold mb-5">Мир</h2>
+        <div id="worldList" class="grid grid-cols-2 gap-3 mb-4"></div>
+        <input id="worldCustom" type="text" placeholder="Или напишите свой мир (если нет в списке)" 
+               class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-4 text-lg">
       </div>
-    </div>
 
-    <div class="p-6">
-      <form id="form" class="space-y-8">
+      <!-- Жанр -->
+      <div class="mb-12">
+        <h2 class="text-2xl font-semibold mb-5">Жанр</h2>
+        <div id="genreList" class="grid grid-cols-2 gap-3 mb-4"></div>
+        <input id="genreCustom" type="text" placeholder="Или напишите свой жанр" 
+               class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-4 text-lg">
+      </div>
 
-        <!-- Поля ввода -->
-        <div class="space-y-6">
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1">Город</label>
-            <input type="text" id="city" placeholder="Москва" 
-                   class="w-full px-4 py-3 border border-zinc-300 rounded-2xl focus:outline-none focus:border-blue-500 text-base">
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1">Telegram (или любой контакт)</label>
-            <input type="text" id="tg" placeholder="@username" 
-                   class="w-full px-4 py-3 border border-zinc-300 rounded-2xl focus:outline-none focus:border-blue-500 text-base">
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-zinc-700 mb-1">О себе</label>
-            <textarea id="about" rows="3" placeholder="Расскажи немного о себе..."
-                      class="w-full px-4 py-3 border border-zinc-300 rounded-3xl focus:outline-none focus:border-blue-500 text-base resize-none"></textarea>
-          </div>
+      <!-- Персонажи -->
+      <div class="mb-12">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold">Персонажи</h2>
+          <button onclick="addCharacter()" 
+                  class="bg-pink-600 hover:bg-pink-700 px-8 py-3 rounded-2xl font-medium transition">
+            + Добавить персонажа
+          </button>
         </div>
+        <div id="charactersContainer" class="space-y-6"></div>
+      </div>
 
-        <!-- Совершеннолетие (обязательно) -->
-        <div class="flex items-start gap-3 bg-amber-50 p-4 rounded-3xl">
-          <input type="checkbox" id="adult" required class="mt-1 w-5 h-5 accent-blue-600">
-          <label for="adult" class="text-sm text-zinc-700">
-            Мне исполнилось <span class="font-semibold">18 лет</span>.<br>
-            <span class="text-xs text-zinc-500">Это обязательное условие</span>
-          </label>
-        </div>
+      <!-- Сюжет -->
+      <div class="mb-10">
+        <h2 class="text-2xl font-semibold mb-5">Сюжет</h2>
+        <textarea id="plot" rows="10" placeholder="Опишите основной сюжет скетча..." 
+                  class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-5 text-lg"></textarea>
+      </div>
 
-        <!-- Галочки по вкусу -->
-        <div>
-          <p class="text-sm font-medium text-zinc-700 mb-3">Мои предпочтения (ставь любые галочки)</p>
-          <div id="preferences" class="grid grid-cols-2 gap-3 text-sm">
-            <!-- Галочки добавятся через JS -->
-          </div>
-        </div>
-
-        <button type="submit" 
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-3xl text-lg transition-all active:scale-95">
-          Отправить анкету
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Модалка успеха -->
-  <div id="successModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center">
-    <div class="bg-white rounded-3xl p-8 max-w-xs w-full text-center">
-      <div class="text-6xl mb-4">🎉</div>
-      <h2 class="text-2xl font-bold mb-2">Спасибо!</h2>
-      <p class="text-zinc-600 mb-6">Твоя анкета отправлена. Мы скоро свяжемся ❤️</p>
-      <button onclick="location.reload()" 
-              class="w-full bg-zinc-900 text-white py-4 rounded-3xl font-medium">
-        Закрыть
+      <button onclick="submitForm()" 
+              class="w-full bg-gradient-to-r from-pink-600 to-purple-600 py-7 rounded-3xl text-2xl font-bold">
+        Скопировать скетч
       </button>
     </div>
   </div>
 
+  <!-- Модалка -->
+  <div id="successModal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+    <div class="glass rounded-3xl p-10 max-w-md w-full text-center">
+      <div class="text-6xl mb-6">✅</div>
+      <h2 class="text-3xl font-bold mb-4">Скетч скопирован!</h2>
+      <div class="bg-zinc-950 rounded-2xl p-6 text-left mb-8 max-h-96 overflow-auto">
+        <pre id="copiedText" class="text-sm text-zinc-300 whitespace-pre-wrap"></pre>
+      </div>
+      <div class="flex gap-4">
+        <button onclick="goToSuggested()" class="flex-1 py-5 bg-pink-600 rounded-2xl text-xl font-semibold">
+          Перейти в предложенные
+        </button>
+        <button onclick="hideModal()" class="flex-1 py-5 bg-zinc-700 rounded-2xl text-xl font-semibold">
+          Отредактировать
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const preferencesList = [
-      "Музыка", "Кино и сериалы", "Спорт", "Путешествия",
-      "Кулинария", "Книги", "Видеоигры", "Искусство",
-      "Фотография", "Танцы", "Авто", "Технологии"
-    ];
+    const worlds = ["Фэнтези", "Темное фэнтези", "Киберпанк", "Постапокалипсис", "Современный мир", "Антиутопия", "Стимпанк", "Дикий Запад", "Историческое", "Утопия", "Хоррор", "Мистика", "Научная фантастика"];
+    const genres = ["Романтика", "Драма", "Ужас", "Приключение", "Экшн", "Детектив", "Юмор", "Трагедия", "Слайс-оф-лайф", "Психологический", "Эротика", "Боевик", "Философский"];
 
-    // Генерируем чекбоксы
-    const prefContainer = document.getElementById('preferences');
-    preferencesList.forEach(item => {
-      const div = document.createElement('div');
-      div.className = "flex items-center gap-2";
-      div.innerHTML = `
-        <input type="checkbox" id="pref-${item}" value="${item}" class="w-5 h-5 accent-blue-600">
-        <label for="pref-${item}" class="text-zinc-700">${item}</label>
-      `;
-      prefContainer.appendChild(div);
-    });
+    let characters = [];
 
-    // Инициализация VK Bridge
-    async function initApp() {
-      try {
-        await vkBridge.send('VKWebAppInit');
-        const user = await vkBridge.send('VKWebAppGetUserInfo');
+    function renderLists() {
+      // Мир
+      document.getElementById('worldList').innerHTML = worlds.map(w => `
+        <label class="flex items-center gap-2 cursor-pointer bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
+          <input type="checkbox" value="${w}" class="world-check w-5 h-5 accent-pink-600">
+          <span>${w}</span>
+        </label>
+      `).join('');
 
-        document.getElementById('userName').textContent = `${user.first_name} ${user.last_name}`;
-        if (user.photo_200) {
-          document.getElementById('userPhoto').src = user.photo_200;
-        }
-      } catch (e) {
-        console.error('VK Bridge error', e);
-      }
+      // Жанр
+      document.getElementById('genreList').innerHTML = genres.map(g => `
+        <label class="flex items-center gap-2 cursor-pointer bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
+          <input type="checkbox" value="${g}" class="genre-check w-5 h-5 accent-pink-600">
+          <span>${g}</span>
+        </label>
+      `).join('');
     }
 
-    // Отправка формы
-    document.getElementById('form').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    function addCharacter() {
+      if (characters.length >= 30) return alert("Максимум 30 персонажей");
+      
+      const id = Date.now();
+      characters.push({id, name: "", desc: ""});
 
-      const selectedPrefs = Array.from(document.querySelectorAll('#preferences input:checked'))
-                               .map(cb => cb.value);
+      const container = document.getElementById('charactersContainer');
+      const div = document.createElement('div');
+      div.className = "bg-zinc-900 border border-zinc-700 rounded-3xl p-6 relative";
+      div.innerHTML = `
+        <button onclick="removeCharacter(${id})" class="absolute top-4 right-4 text-red-400 hover:text-red-500">✕</button>
+        <input type="text" placeholder="Имя / Роль персонажа" maxlength="100"
+               class="w-full bg-transparent border-b border-zinc-600 pb-2 text-lg focus:border-pink-500 outline-none"
+               oninput="updateChar(${id}, 'name', this.value)">
+        <textarea placeholder="Описание персонажа..." rows="4" 
+                  class="w-full mt-4 bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4"
+                  oninput="updateChar(${id}, 'desc', this.value)"></textarea>
+      `;
+      container.appendChild(div);
+    }
 
-      const data = {
-        vk_id: (await vkBridge.send('VKWebAppGetUserInfo')).id,
-        city: document.getElementById('city').value.trim(),
-        tg: document.getElementById('tg').value.trim(),
-        about: document.getElementById('about').value.trim(),
-        adult: document.getElementById('adult').checked,
-        preferences: selectedPrefs
-      };
+    function updateChar(id, field, value) {
+      const char = characters.find(c => c.id === id);
+      if (char) char[field] = value;
+    }
 
-      console.log('📤 Данные анкеты:', data);
-      // Здесь можешь отправить на свой сервер: fetch('https://твой-сервер.ru/api', { method: 'POST', body: JSON.stringify(data) })
+    function removeCharacter(id) {
+      characters = characters.filter(c => c.id !== id);
+      renderCharacters();
+    }
 
-      document.getElementById('successModal').classList.remove('hidden');
-    });
+    function renderCharacters() {
+      // Можно оставить пустым, т.к. мы добавляем напрямую
+    }
 
-    // Запуск
-    window.onload = initApp;
+    function generatePostText() {
+      let text = '';
+
+      // Мир
+      const selectedWorlds = Array.from(document.querySelectorAll('.world-check:checked')).map(el => el.value);
+      const customWorld = document.getElementById('worldCustom').value.trim();
+      if (selectedWorlds.length || customWorld) {
+        text += `Мир: ${selectedWorlds.join(', ')}${customWorld ? (selectedWorlds.length ? ', ' : '') + customWorld : ''}\n\n`;
+      }
+
+      // Жанр
+      const selectedGenres = Array.from(document.querySelectorAll('.genre-check:checked')).map(el => el.value);
+      const customGenre = document.getElementById('genreCustom').value.trim();
+      if (selectedGenres.length || customGenre) {
+        text += `Жанр: ${selectedGenres.join(', ')}${customGenre ? (selectedGenres.length ? ', ' : '') + customGenre : ''}\n\n`;
+      }
+
+      // Персонажи
+      if (characters.length > 0) {
+        text += `Персонажи:\n`;
+        characters.forEach((char, i) => {
+          if (char.name || char.desc) {
+            text += `${i+1}. ${char.name || 'Без имени'}\n${char.desc ? char.desc + '\n\n' : '\n'}`;
+          }
+        });
+      }
+
+      // Сюжет
+      const plot = document.getElementById('plot').value.trim();
+      if (plot) text += `Сюжет:\n${plot}\n`;
+
+      return text.trim() || "Скетч пустой";
+    }
+
+    function submitForm() {
+      const text = generatePostText();
+      navigator.clipboard.writeText(text).then(() => {
+        document.getElementById('copiedText').textContent = text;
+        document.getElementById('successModal').classList.remove('hidden');
+      }).catch(() => alert('Не удалось скопировать'));
+    }
+
+    function goToSuggested() {
+      window.open('https://vk.com/wall-180485573?suggested=1', '_blank');
+    }
+
+    function hideModal() {
+      document.getElementById('successModal').classList.add('hidden');
+    }
+
+    window.onload = () => {
+      renderLists();
+    };
   </script>
 </body>
 </html>
