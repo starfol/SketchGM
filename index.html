@@ -3,170 +3,224 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Интерактивная Карта Мира — Phantasm</title>
+  <title>Конструктор Карты — Phantasm</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; background: #0a050f; font-family: system-ui; }
-    #map-container {
+    body { margin:0; background:#0a050f; font-family:system-ui; overflow:hidden; }
+    #map {
       width: 100vw;
       height: 100vh;
-      background: url('https://i.pinimg.com/originals/79/e7/fe/79e7fe469a91b023af2517fe4a53f28a.jpg') center/cover no-repeat;
+      background: #111827;
       position: relative;
       overflow: hidden;
       cursor: grab;
-      user-select: none;
-    }
-    .location {
-      position: absolute;
-      width: 70px;
-      height: 70px;
-      transform: translate(-50%, -50%);
-      transition: all 0.25s ease;
-      z-index: 10;
-    }
-    .location:hover { transform: translate(-50%, -50%) scale(1.3); z-index: 20; }
-    .house {
-      width: 100%;
-      height: 100%;
-      background: rgba(236, 72, 153, 0.95);
-      border: 4px solid white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      box-shadow: 0 0 20px rgba(236, 72, 153, 0.7);
     }
     .character {
       position: absolute;
-      top: -75px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 58px;
-      height: 58px;
-      border: 3px solid white;
+      width: 80px;
+      height: 80px;
+      border: 4px solid #ec4899;
       border-radius: 50%;
       background-size: cover;
       background-position: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+      box-shadow: 0 0 15px rgba(236, 72, 153, 0.6);
+      cursor: move;
+      user-select: none;
     }
-    .tooltip {
+    .line {
       position: absolute;
-      top: -95px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.85);
-      color: #fff;
-      padding: 6px 16px;
-      border-radius: 9999px;
-      font-size: 15px;
-      white-space: nowrap;
-      opacity: 0;
-      transition: all 0.2s;
-      pointer-events: none;
-    }
-    .location:hover .tooltip { opacity: 1; top: -105px; }
-
-    /* Карточка */
-    #locationModal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
+      height: 4px;
+      background: linear-gradient(to right, #ec4899, #a855f7);
+      transform-origin: left center;
+      pointer-events: all;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <div id="map-container">
-    <!-- Пример локаций -->
-    <div class="location" style="left: 28%; top: 42%;">
-      <div class="character" style="background-image: url('https://i.imgur.com/example1.jpg')"></div>
-      <div class="house">🏰</div>
-      <div class="tooltip">Замок Вороньего Гнезда</div>
-    </div>
-
-    <div class="location" style="left: 52%; top: 38%;">
-      <div class="character" style="background-image: url('https://i.imgur.com/example2.jpg')"></div>
-      <div class="house">🌲</div>
-      <div class="tooltip">Тёмный Лес</div>
-    </div>
-
-    <div class="location" style="left: 65%; top: 65%;">
-      <div class="character" style="background-image: url('https://i.imgur.com/example3.jpg')"></div>
-      <div class="house">🏠</div>
-      <div class="tooltip">Деревня Элдервуд</div>
-    </div>
-
-    <!-- Добавляй сюда свои локации -->
+  <div class="absolute top-4 left-4 z-50 bg-black/80 p-4 rounded-2xl text-white flex flex-wrap gap-3">
+    <input id="imgUrl" type="text" placeholder="Ссылка на изображение персонажа" class="bg-zinc-900 px-4 py-2 rounded-xl w-80">
+    <button onclick="addCharacter()" class="bg-pink-600 px-6 py-2 rounded-xl hover:bg-pink-700">Добавить</button>
+    <button onclick="takeScreenshot()" class="bg-emerald-600 px-6 py-2 rounded-xl hover:bg-emerald-700">📸 Скриншот</button>
+    <button onclick="clearAll()" class="bg-red-600 px-6 py-2 rounded-xl hover:bg-red-700">Очистить всё</button>
   </div>
 
-  <!-- Карточка локации -->
-  <div id="locationModal" onclick="if(event.target===this) hideModal()">
-    <div class="glass max-w-lg w-full mx-4 rounded-3xl p-8 text-white">
-      <button onclick="hideModal()" class="float-right text-3xl leading-none">×</button>
-      <h2 id="modalTitle" class="text-3xl font-bold mb-4"></h2>
-      <div id="modalContent" class="text-zinc-300 leading-relaxed"></div>
-    </div>
-  </div>
+  <div id="map"></div>
 
   <script>
-    const map = document.getElementById('map-container');
-    let scale = 1;
-    let isDragging = false;
-    let startX, startY, scrollLeft, scrollTop;
+    let characters = [];
+    let connections = [];
+    const map = document.getElementById('map');
 
-    // Перетаскивание
-    map.addEventListener('mousedown', e => {
-      isDragging = true;
-      startX = e.pageX - map.offsetLeft;
-      startY = e.pageY - map.offsetTop;
-      scrollLeft = map.scrollLeft;
-      scrollTop = map.scrollTop;
-    });
+    // === Загрузка сохранённых данных ===
+    function loadData() {
+      const saved = localStorage.getItem('phantasmMap');
+      if (!saved) return;
+      
+      const data = JSON.parse(saved);
+      characters = [];
+      connections = [];
 
-    window.addEventListener('mouseup', () => isDragging = false);
-    window.addEventListener('mousemove', e => {
-      if (!isDragging) return;
-      const x = e.pageX - map.offsetLeft;
-      const y = e.pageY - map.offsetTop;
-      map.scrollLeft = scrollLeft - (x - startX);
-      map.scrollTop = scrollTop - (y - startY);
-    });
-
-    // Зум колёсиком
-    map.addEventListener('wheel', e => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      scale = Math.min(Math.max(0.5, scale * delta), 4);
-      map.style.transform = `scale(${scale})`;
-    });
-
-    // Открытие карточки
-    function showLocation(title, content) {
-      document.getElementById('modalTitle').textContent = title;
-      document.getElementById('modalContent').innerHTML = content;
-      document.getElementById('locationModal').style.display = 'flex';
-    }
-
-    function hideModal() {
-      document.getElementById('locationModal').style.display = 'none';
-    }
-
-    // Пример: клик по локациям
-    document.querySelectorAll('.location').forEach(loc => {
-      loc.addEventListener('click', () => {
-        const title = loc.querySelector('.tooltip').textContent;
-        const content = `
-          <p class="mb-4">Здесь живёт важный персонаж или происходит ключевые события.</p>
-          <p><strong>Описание:</strong> Красивое место с богатой историей...</p>
-        `;
-        showLocation(title, content);
+      // Восстанавливаем персонажей
+      data.characters.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'character';
+        el.style.backgroundImage = `url('${c.img}')`;
+        el.style.left = c.left;
+        el.style.top = c.top;
+        el.dataset.id = c.id;
+        makeDraggable(el);
+        map.appendChild(el);
+        characters.push(el);
       });
-    });
+
+      // Восстанавливаем связи
+      data.connections.forEach(conn => {
+        const a = characters.find(ch => ch.dataset.id === conn.from);
+        const b = characters.find(ch => ch.dataset.id === conn.to);
+        if (a && b) drawLine(a, b, true);
+      });
+    }
+
+    // === Сохранение данных ===
+    function saveData() {
+      const charData = characters.map(ch => ({
+        id: ch.dataset.id,
+        img: ch.style.backgroundImage.slice(5, -2),
+        left: ch.style.left,
+        top: ch.style.top
+      }));
+
+      const connData = connections.map(line => ({
+        from: line.dataset.from,
+        to: line.dataset.to
+      }));
+
+      localStorage.setItem('phantasmMap', JSON.stringify({
+        characters: charData,
+        connections: connData
+      }));
+    }
+
+    function addCharacter() {
+      const url = document.getElementById('imgUrl').value.trim();
+      if (!url) return alert("Вставьте ссылку на изображение");
+
+      const id = Date.now().toString();
+      const char = document.createElement('div');
+      char.className = 'character';
+      char.style.backgroundImage = `url('${url}')`;
+      char.style.left = '45%';
+      char.style.top = '45%';
+      char.dataset.id = id;
+
+      makeDraggable(char);
+      map.appendChild(char);
+      characters.push(char);
+      saveData();
+    }
+
+    function makeDraggable(el) {
+      let isDragging = false;
+
+      el.addEventListener('mousedown', e => {
+        if (e.button === 0) {
+          isDragging = true;
+        }
+      });
+
+      document.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        el.style.left = (e.clientX / window.innerWidth * 100) + '%';
+        el.style.top = (e.clientY / window.innerHeight * 100) + '%';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          saveData();
+        }
+      });
+
+      // Правый клик — связь
+      el.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        startConnection(el);
+      });
+    }
+
+    // Связи
+    let startChar = null;
+    function startConnection(char) {
+      if (!startChar) {
+        startChar = char;
+      } else if (startChar !== char) {
+        drawLine(startChar, char);
+        startChar = null;
+      }
+    }
+
+    function drawLine(a, b, isLoaded = false) {
+      const line = document.createElement('div');
+      line.className = 'line';
+      line.dataset.from = a.dataset.id;
+      line.dataset.to = b.dataset.id;
+
+      updateLinePosition(line, a, b);
+      map.appendChild(line);
+      connections.push(line);
+
+      // Удаление связи правой кнопкой
+      line.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if (confirm("Удалить эту связь?")) {
+          line.remove();
+          connections = connections.filter(l => l !== line);
+          saveData();
+        }
+      });
+
+      if (!isLoaded) saveData();
+    }
+
+    function updateLinePosition(line, a, b) {
+      const x1 = a.offsetLeft + a.offsetWidth / 2;
+      const y1 = a.offsetTop + a.offsetHeight / 2;
+      const x2 = b.offsetLeft + b.offsetWidth / 2;
+      const y2 = b.offsetTop + b.offsetHeight / 2;
+
+      const length = Math.hypot(x2 - x1, y2 - y1);
+      const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+      line.style.width = length + 'px';
+      line.style.left = x1 + 'px';
+      line.style.top = y1 + 'px';
+      line.style.transform = `rotate(${angle}deg)`;
+    }
+
+    function takeScreenshot() {
+      html2canvas(map, { scale: 1.5 }).then(canvas => {
+        canvas.toBlob(blob => {
+          navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => {
+            alert('✅ Скриншот карты скопирован в буфер обмена!');
+          });
+        });
+      });
+    }
+
+    function clearAll() {
+      if (confirm("Очистить ВСЁ? Это действие нельзя отменить.")) {
+        localStorage.removeItem('phantasmMap');
+        location.reload();
+      }
+    }
+
+    // Инициализация
+    window.onload = () => {
+      loadData();
+    };
   </script>
 </body>
 </html>
