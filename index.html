@@ -3,193 +3,170 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phantasm Sketches — Создать скетч</title>
+  <title>Интерактивная Карта Мира — Phantasm</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: linear-gradient(135deg, #0f0a1f, #1a0f2e); color: #e0d4ff; font-family: system-ui; }
-    .glass { background: rgba(26, 17, 46, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(192, 38, 211, 0.3); }
+    body { margin: 0; overflow: hidden; background: #0a050f; font-family: system-ui; }
+    #map-container {
+      width: 100vw;
+      height: 100vh;
+      background: url('https://i.pinimg.com/originals/79/e7/fe/79e7fe469a91b023af2517fe4a53f28a.jpg') center/cover no-repeat;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+      user-select: none;
+    }
+    .location {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      transform: translate(-50%, -50%);
+      transition: all 0.25s ease;
+      z-index: 10;
+    }
+    .location:hover { transform: translate(-50%, -50%) scale(1.3); z-index: 20; }
+    .house {
+      width: 100%;
+      height: 100%;
+      background: rgba(236, 72, 153, 0.95);
+      border: 4px solid white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 0 20px rgba(236, 72, 153, 0.7);
+    }
+    .character {
+      position: absolute;
+      top: -75px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 58px;
+      height: 58px;
+      border: 3px solid white;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+    }
+    .tooltip {
+      position: absolute;
+      top: -95px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 6px 16px;
+      border-radius: 9999px;
+      font-size: 15px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: all 0.2s;
+      pointer-events: none;
+    }
+    .location:hover .tooltip { opacity: 1; top: -105px; }
+
+    /* Карточка */
+    #locationModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
   </style>
 </head>
-<body class="min-h-screen">
+<body>
 
-  <div class="max-w-3xl mx-auto py-10 px-6">
-    <div class="glass rounded-3xl p-10">
-
-      <h1 class="text-5xl font-bold text-center mb-12">Создать скетч</h1>
-
-      <!-- Мир -->
-      <div class="mb-12">
-        <h2 class="text-2xl font-semibold mb-5">Мир</h2>
-        <div id="worldList" class="grid grid-cols-2 gap-3 mb-4"></div>
-        <input id="worldCustom" type="text" placeholder="Или напишите свой мир (если нет в списке)" 
-               class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-4 text-lg">
-      </div>
-
-      <!-- Жанр -->
-      <div class="mb-12">
-        <h2 class="text-2xl font-semibold mb-5">Жанр</h2>
-        <div id="genreList" class="grid grid-cols-2 gap-3 mb-4"></div>
-        <input id="genreCustom" type="text" placeholder="Или напишите свой жанр" 
-               class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-4 text-lg">
-      </div>
-
-      <!-- Персонажи -->
-      <div class="mb-12">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold">Персонажи</h2>
-          <button onclick="addCharacter()" 
-                  class="bg-pink-600 hover:bg-pink-700 px-8 py-3 rounded-2xl font-medium transition">
-            + Добавить персонажа
-          </button>
-        </div>
-        <div id="charactersContainer" class="space-y-6"></div>
-      </div>
-
-      <!-- Сюжет -->
-      <div class="mb-10">
-        <h2 class="text-2xl font-semibold mb-5">Сюжет</h2>
-        <textarea id="plot" rows="10" placeholder="Опишите основной сюжет скетча..." 
-                  class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-6 py-5 text-lg"></textarea>
-      </div>
-
-      <button onclick="submitForm()" 
-              class="w-full bg-gradient-to-r from-pink-600 to-purple-600 py-7 rounded-3xl text-2xl font-bold">
-        Скопировать скетч
-      </button>
+  <div id="map-container">
+    <!-- Пример локаций -->
+    <div class="location" style="left: 28%; top: 42%;">
+      <div class="character" style="background-image: url('https://i.imgur.com/example1.jpg')"></div>
+      <div class="house">🏰</div>
+      <div class="tooltip">Замок Вороньего Гнезда</div>
     </div>
+
+    <div class="location" style="left: 52%; top: 38%;">
+      <div class="character" style="background-image: url('https://i.imgur.com/example2.jpg')"></div>
+      <div class="house">🌲</div>
+      <div class="tooltip">Тёмный Лес</div>
+    </div>
+
+    <div class="location" style="left: 65%; top: 65%;">
+      <div class="character" style="background-image: url('https://i.imgur.com/example3.jpg')"></div>
+      <div class="house">🏠</div>
+      <div class="tooltip">Деревня Элдервуд</div>
+    </div>
+
+    <!-- Добавляй сюда свои локации -->
   </div>
 
-  <!-- Модалка -->
-  <div id="successModal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50">
-    <div class="glass rounded-3xl p-10 max-w-md w-full text-center">
-      <div class="text-6xl mb-6">✅</div>
-      <h2 class="text-3xl font-bold mb-4">Скетч скопирован!</h2>
-      <div class="bg-zinc-950 rounded-2xl p-6 text-left mb-8 max-h-96 overflow-auto">
-        <pre id="copiedText" class="text-sm text-zinc-300 whitespace-pre-wrap"></pre>
-      </div>
-      <div class="flex gap-4">
-        <button onclick="goToSuggested()" class="flex-1 py-5 bg-pink-600 rounded-2xl text-xl font-semibold">
-          Перейти в предложенные
-        </button>
-        <button onclick="hideModal()" class="flex-1 py-5 bg-zinc-700 rounded-2xl text-xl font-semibold">
-          Отредактировать
-        </button>
-      </div>
+  <!-- Карточка локации -->
+  <div id="locationModal" onclick="if(event.target===this) hideModal()">
+    <div class="glass max-w-lg w-full mx-4 rounded-3xl p-8 text-white">
+      <button onclick="hideModal()" class="float-right text-3xl leading-none">×</button>
+      <h2 id="modalTitle" class="text-3xl font-bold mb-4"></h2>
+      <div id="modalContent" class="text-zinc-300 leading-relaxed"></div>
     </div>
   </div>
 
   <script>
-    const worlds = ["Фэнтези", "Темное фэнтези", "Киберпанк", "Постапокалипсис", "Современный мир", "Антиутопия", "Стимпанк", "Дикий Запад", "Историческое", "Утопия", "Хоррор", "Мистика", "Научная фантастика"];
-    const genres = ["Романтика", "Драма", "Ужас", "Приключение", "Экшн", "Детектив", "Юмор", "Трагедия", "Слайс-оф-лайф", "Психологический", "Эротика", "Боевик", "Философский"];
+    const map = document.getElementById('map-container');
+    let scale = 1;
+    let isDragging = false;
+    let startX, startY, scrollLeft, scrollTop;
 
-    let characters = [];
+    // Перетаскивание
+    map.addEventListener('mousedown', e => {
+      isDragging = true;
+      startX = e.pageX - map.offsetLeft;
+      startY = e.pageY - map.offsetTop;
+      scrollLeft = map.scrollLeft;
+      scrollTop = map.scrollTop;
+    });
 
-    function renderLists() {
-      // Мир
-      document.getElementById('worldList').innerHTML = worlds.map(w => `
-        <label class="flex items-center gap-2 cursor-pointer bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
-          <input type="checkbox" value="${w}" class="world-check w-5 h-5 accent-pink-600">
-          <span>${w}</span>
-        </label>
-      `).join('');
+    window.addEventListener('mouseup', () => isDragging = false);
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const x = e.pageX - map.offsetLeft;
+      const y = e.pageY - map.offsetTop;
+      map.scrollLeft = scrollLeft - (x - startX);
+      map.scrollTop = scrollTop - (y - startY);
+    });
 
-      // Жанр
-      document.getElementById('genreList').innerHTML = genres.map(g => `
-        <label class="flex items-center gap-2 cursor-pointer bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
-          <input type="checkbox" value="${g}" class="genre-check w-5 h-5 accent-pink-600">
-          <span>${g}</span>
-        </label>
-      `).join('');
-    }
+    // Зум колёсиком
+    map.addEventListener('wheel', e => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      scale = Math.min(Math.max(0.5, scale * delta), 4);
+      map.style.transform = `scale(${scale})`;
+    });
 
-    function addCharacter() {
-      if (characters.length >= 30) return alert("Максимум 30 персонажей");
-      
-      const id = Date.now();
-      characters.push({id, name: "", desc: ""});
-
-      const container = document.getElementById('charactersContainer');
-      const div = document.createElement('div');
-      div.className = "bg-zinc-900 border border-zinc-700 rounded-3xl p-6 relative";
-      div.innerHTML = `
-        <button onclick="removeCharacter(${id})" class="absolute top-4 right-4 text-red-400 hover:text-red-500">✕</button>
-        <input type="text" placeholder="Имя / Роль персонажа" maxlength="100"
-               class="w-full bg-transparent border-b border-zinc-600 pb-2 text-lg focus:border-pink-500 outline-none"
-               oninput="updateChar(${id}, 'name', this.value)">
-        <textarea placeholder="Описание персонажа..." rows="4" 
-                  class="w-full mt-4 bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4"
-                  oninput="updateChar(${id}, 'desc', this.value)"></textarea>
-      `;
-      container.appendChild(div);
-    }
-
-    function updateChar(id, field, value) {
-      const char = characters.find(c => c.id === id);
-      if (char) char[field] = value;
-    }
-
-    function removeCharacter(id) {
-      characters = characters.filter(c => c.id !== id);
-      renderCharacters();
-    }
-
-    function renderCharacters() {
-      // Можно оставить пустым, т.к. мы добавляем напрямую
-    }
-
-    function generatePostText() {
-      let text = '';
-
-      // Мир
-      const selectedWorlds = Array.from(document.querySelectorAll('.world-check:checked')).map(el => el.value);
-      const customWorld = document.getElementById('worldCustom').value.trim();
-      if (selectedWorlds.length || customWorld) {
-        text += `Мир: ${selectedWorlds.join(', ')}${customWorld ? (selectedWorlds.length ? ', ' : '') + customWorld : ''}\n\n`;
-      }
-
-      // Жанр
-      const selectedGenres = Array.from(document.querySelectorAll('.genre-check:checked')).map(el => el.value);
-      const customGenre = document.getElementById('genreCustom').value.trim();
-      if (selectedGenres.length || customGenre) {
-        text += `Жанр: ${selectedGenres.join(', ')}${customGenre ? (selectedGenres.length ? ', ' : '') + customGenre : ''}\n\n`;
-      }
-
-      // Персонажи
-      if (characters.length > 0) {
-        text += `Персонажи:\n`;
-        characters.forEach((char, i) => {
-          if (char.name || char.desc) {
-            text += `${i+1}. ${char.name || 'Без имени'}\n${char.desc ? char.desc + '\n\n' : '\n'}`;
-          }
-        });
-      }
-
-      // Сюжет
-      const plot = document.getElementById('plot').value.trim();
-      if (plot) text += `Сюжет:\n${plot}\n`;
-
-      return text.trim() || "Скетч пустой";
-    }
-
-    function submitForm() {
-      const text = generatePostText();
-      navigator.clipboard.writeText(text).then(() => {
-        document.getElementById('copiedText').textContent = text;
-        document.getElementById('successModal').classList.remove('hidden');
-      }).catch(() => alert('Не удалось скопировать'));
-    }
-
-    function goToSuggested() {
-      window.open('https://vk.com/wall-180485573?suggested=1', '_blank');
+    // Открытие карточки
+    function showLocation(title, content) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalContent').innerHTML = content;
+      document.getElementById('locationModal').style.display = 'flex';
     }
 
     function hideModal() {
-      document.getElementById('successModal').classList.add('hidden');
+      document.getElementById('locationModal').style.display = 'none';
     }
 
-    window.onload = () => {
-      renderLists();
-    };
+    // Пример: клик по локациям
+    document.querySelectorAll('.location').forEach(loc => {
+      loc.addEventListener('click', () => {
+        const title = loc.querySelector('.tooltip').textContent;
+        const content = `
+          <p class="mb-4">Здесь живёт важный персонаж или происходит ключевые события.</p>
+          <p><strong>Описание:</strong> Красивое место с богатой историей...</p>
+        `;
+        showLocation(title, content);
+      });
+    });
   </script>
 </body>
 </html>
