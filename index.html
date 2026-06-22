@@ -18,33 +18,35 @@
     }
     .character {
       position: absolute;
-      width: 80px;
-      height: 80px;
+      width: 85px;
+      height: 85px;
       border: 4px solid #ec4899;
       border-radius: 50%;
       background-size: cover;
       background-position: center;
-      box-shadow: 0 0 15px rgba(236, 72, 153, 0.6);
+      box-shadow: 0 0 20px rgba(236, 72, 153, 0.7);
       cursor: move;
       user-select: none;
     }
     .line {
       position: absolute;
-      height: 4px;
+      height: 5px;
       background: linear-gradient(to right, #ec4899, #a855f7);
       transform-origin: left center;
       pointer-events: all;
       cursor: pointer;
+      z-index: 5;
     }
   </style>
 </head>
 <body>
 
-  <div class="absolute top-4 left-4 z-50 bg-black/80 p-4 rounded-2xl text-white flex flex-wrap gap-3">
-    <input id="imgUrl" type="text" placeholder="Ссылка на изображение персонажа" class="bg-zinc-900 px-4 py-2 rounded-xl w-80">
-    <button onclick="addCharacter()" class="bg-pink-600 px-6 py-2 rounded-xl hover:bg-pink-700">Добавить</button>
-    <button onclick="takeScreenshot()" class="bg-emerald-600 px-6 py-2 rounded-xl hover:bg-emerald-700">📸 Скриншот</button>
-    <button onclick="clearAll()" class="bg-red-600 px-6 py-2 rounded-xl hover:bg-red-700">Очистить всё</button>
+  <div class="absolute top-4 left-4 z-50 bg-black/80 p-5 rounded-3xl text-white flex flex-wrap gap-3 items-center">
+    <input id="imgUrl" type="text" placeholder="Ссылка на изображение" class="bg-zinc-900 px-4 py-3 rounded-2xl w-96">
+    <button onclick="addCharacter()" class="bg-pink-600 px-6 py-3 rounded-2xl hover:bg-pink-700">Добавить персонажа</button>
+    <button onclick="addPlaceholder()" class="bg-zinc-700 px-6 py-3 rounded-2xl hover:bg-zinc-600">Добавить без картинки</button>
+    <button onclick="takeScreenshot()" class="bg-emerald-600 px-6 py-3 rounded-2xl hover:bg-emerald-700">📸 Скриншот карты</button>
+    <button onclick="clearAll()" class="bg-red-600 px-6 py-3 rounded-2xl hover:bg-red-700">Очистить всё</button>
   </div>
 
   <div id="map"></div>
@@ -54,29 +56,18 @@
     let connections = [];
     const map = document.getElementById('map');
 
-    // === Загрузка сохранённых данных ===
+    // Загрузка
     function loadData() {
       const saved = localStorage.getItem('phantasmMap');
       if (!saved) return;
-      
       const data = JSON.parse(saved);
-      characters = [];
-      connections = [];
 
-      // Восстанавливаем персонажей
       data.characters.forEach(c => {
-        const el = document.createElement('div');
-        el.className = 'character';
-        el.style.backgroundImage = `url('${c.img}')`;
-        el.style.left = c.left;
-        el.style.top = c.top;
-        el.dataset.id = c.id;
-        makeDraggable(el);
+        const el = createCharacterElement(c.img, c.left, c.top, c.id);
         map.appendChild(el);
         characters.push(el);
       });
 
-      // Восстанавливаем связи
       data.connections.forEach(conn => {
         const a = characters.find(ch => ch.dataset.id === conn.from);
         const b = characters.find(ch => ch.dataset.id === conn.to);
@@ -84,11 +75,129 @@
       });
     }
 
-    // === Сохранение данных ===
+    function createCharacterElement(imgUrl, left, top, id = Date.now().toString()) {
+      const char = document.createElement('div');
+      char.className = 'character';
+      char.style.backgroundImage = imgUrl ? `url('${imgUrl}')` : 'none';
+      char.style.left = left || '40%';
+      char.style.top = top || '40%';
+      char.dataset.id = id;
+      makeDraggable(char);
+      return char;
+    }
+
+    function addCharacter() {
+      const url = document.getElementById('imgUrl').value.trim();
+      if (!url) return alert("Вставьте ссылку на изображение");
+      const char = createCharacterElement(url);
+      map.appendChild(char);
+      characters.push(char);
+      saveData();
+    }
+
+    function addPlaceholder() {
+      const char = createCharacterElement(null);
+      map.appendChild(char);
+      characters.push(char);
+      saveData();
+    }
+
+    function makeDraggable(el) {
+      el.addEventListener('mousedown', e => {
+        if (e.button === 0) startDrag(e, el);
+      });
+      el.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        startConnection(el);
+      });
+    }
+
+    let dragging = null;
+    function startDrag(e, el) {
+      dragging = el;
+    }
+
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      dragging.style.left = (e.clientX / window.innerWidth * 100) + '%';
+      dragging.style.top = (e.clientY / window.innerHeight * 100) + '%';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (dragging) {
+        saveData();
+        dragging = null;
+      }
+    });
+
+    // Связи
+    let startChar = null;
+    function startConnection(char) {
+      if (!startChar) {
+        startChar = char;
+      } else if (startChar !== char) {
+        drawLine(startChar, char);
+        startChar = null;
+      }
+    }
+
+    function drawLine(a, b, isLoad = false) {
+      const line = document.createElement('div');
+      line.className = 'line';
+      line.dataset.from = a.dataset.id;
+      line.dataset.to = b.dataset.id;
+
+      updateLine(line, a, b);
+      map.appendChild(line);
+      connections.push(line);
+
+      // Удаление связи
+      line.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        if (confirm("Удалить связь?")) {
+          line.remove();
+          connections = connections.filter(l => l !== line);
+          saveData();
+        }
+      });
+
+      if (!isLoad) saveData();
+    }
+
+    function updateLine(line, a, b) {
+      const rectA = a.getBoundingClientRect();
+      const rectB = b.getBoundingClientRect();
+      const mapRect = map.getBoundingClientRect();
+
+      const x1 = rectA.left + rectA.width/2 - mapRect.left;
+      const y1 = rectA.top + rectA.height/2 - mapRect.top;
+      const x2 = rectB.left + rectB.width/2 - mapRect.left;
+      const y2 = rectB.top + rectB.height/2 - mapRect.top;
+
+      const length = Math.hypot(x2-x1, y2-y1);
+      const angle = Math.atan2(y2-y1, x2-x1) * 180 / Math.PI;
+
+      line.style.width = length + 'px';
+      line.style.left = x1 + 'px';
+      line.style.top = y1 + 'px';
+      line.style.transform = `rotate(${angle}deg)`;
+    }
+
+    // Скриншот
+    function takeScreenshot() {
+      html2canvas(map, { scale: 2, useCORS: true }).then(canvas => {
+        canvas.toBlob(blob => {
+          navigator.clipboard.write([new ClipboardItem({'image/png': blob})])
+            .then(() => alert('✅ Скриншот всей карты скопирован в буфер!'))
+            .catch(() => alert('Не удалось скопировать'));
+        });
+      });
+    }
+
     function saveData() {
       const charData = characters.map(ch => ({
         id: ch.dataset.id,
-        img: ch.style.backgroundImage.slice(5, -2),
+        img: ch.style.backgroundImage ? ch.style.backgroundImage.slice(5, -2) : null,
         left: ch.style.left,
         top: ch.style.top
       }));
@@ -104,120 +213,14 @@
       }));
     }
 
-    function addCharacter() {
-      const url = document.getElementById('imgUrl').value.trim();
-      if (!url) return alert("Вставьте ссылку на изображение");
-
-      const id = Date.now().toString();
-      const char = document.createElement('div');
-      char.className = 'character';
-      char.style.backgroundImage = `url('${url}')`;
-      char.style.left = '45%';
-      char.style.top = '45%';
-      char.dataset.id = id;
-
-      makeDraggable(char);
-      map.appendChild(char);
-      characters.push(char);
-      saveData();
-    }
-
-    function makeDraggable(el) {
-      let isDragging = false;
-
-      el.addEventListener('mousedown', e => {
-        if (e.button === 0) {
-          isDragging = true;
-        }
-      });
-
-      document.addEventListener('mousemove', e => {
-        if (!isDragging) return;
-        el.style.left = (e.clientX / window.innerWidth * 100) + '%';
-        el.style.top = (e.clientY / window.innerHeight * 100) + '%';
-      });
-
-      document.addEventListener('mouseup', () => {
-        if (isDragging) {
-          isDragging = false;
-          saveData();
-        }
-      });
-
-      // Правый клик — связь
-      el.addEventListener('contextmenu', e => {
-        e.preventDefault();
-        startConnection(el);
-      });
-    }
-
-    // Связи
-    let startChar = null;
-    function startConnection(char) {
-      if (!startChar) {
-        startChar = char;
-      } else if (startChar !== char) {
-        drawLine(startChar, char);
-        startChar = null;
-      }
-    }
-
-    function drawLine(a, b, isLoaded = false) {
-      const line = document.createElement('div');
-      line.className = 'line';
-      line.dataset.from = a.dataset.id;
-      line.dataset.to = b.dataset.id;
-
-      updateLinePosition(line, a, b);
-      map.appendChild(line);
-      connections.push(line);
-
-      // Удаление связи правой кнопкой
-      line.addEventListener('contextmenu', e => {
-        e.preventDefault();
-        if (confirm("Удалить эту связь?")) {
-          line.remove();
-          connections = connections.filter(l => l !== line);
-          saveData();
-        }
-      });
-
-      if (!isLoaded) saveData();
-    }
-
-    function updateLinePosition(line, a, b) {
-      const x1 = a.offsetLeft + a.offsetWidth / 2;
-      const y1 = a.offsetTop + a.offsetHeight / 2;
-      const x2 = b.offsetLeft + b.offsetWidth / 2;
-      const y2 = b.offsetTop + b.offsetHeight / 2;
-
-      const length = Math.hypot(x2 - x1, y2 - y1);
-      const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-
-      line.style.width = length + 'px';
-      line.style.left = x1 + 'px';
-      line.style.top = y1 + 'px';
-      line.style.transform = `rotate(${angle}deg)`;
-    }
-
-    function takeScreenshot() {
-      html2canvas(map, { scale: 1.5 }).then(canvas => {
-        canvas.toBlob(blob => {
-          navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(() => {
-            alert('✅ Скриншот карты скопирован в буфер обмена!');
-          });
-        });
-      });
-    }
-
     function clearAll() {
-      if (confirm("Очистить ВСЁ? Это действие нельзя отменить.")) {
+      if (confirm("Удалить ВСЁ?")) {
         localStorage.removeItem('phantasmMap');
         location.reload();
       }
     }
 
-    // Инициализация
+    // Запуск
     window.onload = () => {
       loadData();
     };
